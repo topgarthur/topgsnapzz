@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.local
+.env.*.local
+dist
+.DS_Store
+*.log
+scripts/.tmp
+public/ort
+public/mediapipe
+public/models/*.tflite
+public/models/lama_fp32.onnx
+public/tess
