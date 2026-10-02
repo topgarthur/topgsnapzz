@@ -52,8 +52,8 @@ export default function SingleStage({
             event.target.value = '';
           }}
         />
-        <strong>Drop photos here</strong>
-        <span>JPEG, PNG, WebP, or iPhone HEIC. A batch stays off the main thread.</span>
+        <strong>Choose photos</strong>
+        <span>Tap to pick JPEG, PNG, WebP, or iPhone HEIC. You can also drop files here.</span>
       </label>
       <p className="privacy">Photos never leave this device.</p>
 

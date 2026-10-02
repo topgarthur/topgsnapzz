@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { saveFile } from '../utils/saveFile.js';
 import { coverRects, cropBitmap, edgeCrop, findTextBoxes } from '../utils/smartCrop.js';
 
 const MAX_CROP = 10;
@@ -126,12 +127,7 @@ export default function CropStudio({ onSend }) {
   const download = (item) => {
     const blob = item?.resultBlob;
     if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cropped_${item.name.replace(/\.[^.]+$/, '')}.jpg`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    saveFile(blob, `cropped_${item.name.replace(/\.[^.]+$/, '')}.jpg`);
   };
 
   const send = async (item) => {
@@ -268,14 +264,14 @@ export default function CropStudio({ onSend }) {
         <input
           data-testid="crop-input"
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           multiple
           onChange={(event) => {
             if (event.target.files?.length) addFiles(event.target.files);
             event.target.value = '';
           }}
         />
-        <strong>Drop photos to crop</strong>
+        <strong>Choose photos to crop</strong>
         <span>{items.length}/{MAX_CROP} in this batch. These do not enter the reframer until you send them.</span>
       </label>
       <div className="segment crop-modes" role="group" aria-label="Crop mode">

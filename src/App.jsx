@@ -9,6 +9,7 @@ import MemoryRemix from './components/MemoryRemix.jsx';
 import { useImageProcessor } from './hooks/useImageProcessor.js';
 import { isHeicFile, prepareImage } from './utils/exifHandler.js';
 import { deviceProfile, frameBox } from './utils/smartResize.js';
+import { saveFile } from './utils/saveFile.js';
 import { buildZip, zipEntryName } from './utils/zipBuilder.js';
 
 const MAX_BATCH = 5;
@@ -56,15 +57,6 @@ function reducer(state, action) {
     default:
       return state;
   }
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 export default function App() {
@@ -341,7 +333,7 @@ export default function App() {
   const downloadActive = () => {
     const asset = active ? library.current.get(active.id) : null;
     if (!asset?.resultBlob) return;
-    downloadBlob(asset.resultBlob, zipEntryName(active.name, 0));
+    saveFile(asset.resultBlob, zipEntryName(active.name, 0));
   };
 
   const downloadZip = async () => {
@@ -357,7 +349,7 @@ export default function App() {
       entries.push({ name: file.name, data: new Uint8Array(await file.blob.arrayBuffer()) });
     }
     const zip = await buildZip(entries);
-    downloadBlob(zip, 'topgsnapzz_batch.zip');
+    saveFile(zip, 'topgsnapzz_batch.zip');
   };
 
   const applyMode = (next) => {

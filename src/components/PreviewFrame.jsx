@@ -188,7 +188,7 @@ export default function PreviewFrame({
             />
           ) : null}
 
-          {!item ? <p className="frame-empty">Drop a photo to fill a 9:16 frame.</p> : null}
+          {!item ? <p className="frame-empty">Choose a photo to fill a 9:16 frame.</p> : null}
           {showSafeZone && item ? <SafeZoneOverlay profileId={deviceProfileId} /> : null}
           {busy && item?.frameMode === 'topgai' ? (
             <div className="frame-progress" data-testid="topgai-progress" role="status">
@@ -219,7 +219,7 @@ export default function PreviewFrame({
         <span data-testid="subject-lock">
           {autoFrame && item?.anchor ? `Locked: ${item.anchor.label}` : 'Center weight'}
         </span>
-        <span>{dragging ? 'Release to render' : 'Drag to reframe'}</span>
+        <span>{dragging ? 'Release to render' : 'Slide to reframe'}</span>
         {item?.resultUrl ? (
           <button type="button" className="text-btn" data-testid="view-sent" onClick={() => setViewing(true)}>
             View sent
