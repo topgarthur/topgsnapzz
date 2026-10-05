@@ -9,6 +9,7 @@ import MemoryRemix from './components/MemoryRemix.jsx';
 import { useImageProcessor } from './hooks/useImageProcessor.js';
 import { isHeicFile, prepareImage } from './utils/exifHandler.js';
 import { deviceProfile, frameBox } from './utils/smartResize.js';
+import { phoneBrowser } from './utils/phoneBrowser.js';
 import { saveFile } from './utils/saveFile.js';
 import { buildZip, zipEntryName } from './utils/zipBuilder.js';
 
@@ -118,6 +119,7 @@ export default function App() {
             height: box.height,
             frameSize: settings.frameSize,
             caption: current?.caption || '',
+            skipLama: phoneBrowser(),
           },
         };
       }, priority)
@@ -400,6 +402,7 @@ export default function App() {
           width: box.width,
           height: box.height,
           caption: current?.caption || '',
+          skipLama: phoneBrowser(),
         },
       };
     }, true);

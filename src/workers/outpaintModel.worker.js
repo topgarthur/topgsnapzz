@@ -7,6 +7,23 @@ function releaseBitmap(bitmap) {
   if (typeof trigger === 'function') trigger();
 }
 
+function phoneBrowser() {
+  const ua = self.navigator?.userAgent || '';
+  if (/Android|iPhone|iPad|iPod/i.test(ua)) return true;
+  return /Macintosh/i.test(ua) && (self.navigator?.maxTouchPoints || 0) > 1;
+}
+
+async function fillLight(bitmap, options) {
+  let runPrior = null;
+  try {
+    const { ort, session } = await loadSession();
+    runPrior = (source, placement) => buildOnnxPrior(source, placement, session, ort);
+  } catch {
+    runPrior = null;
+  }
+  return generativeFill(bitmap, options || {}, runPrior);
+}
+
 let sessionPromise = null;
 let lamaPromise = null;
 
@@ -66,22 +83,22 @@ self.onmessage = async (event) => {
       blob = await paintFullFrame(bitmap, options || {});
       engine = 'original';
     } else if (mode === 'generate' || mode === 'topgai') {
-      try {
-        const { ort, session } = await loadLama();
-        const filled = await lamaFill(bitmap, options || {}, session, ort);
+      const light = Boolean(options?.skipLama) || phoneBrowser();
+      if (light) {
+        const filled = await fillLight(bitmap, options || {});
         blob = filled.blob;
         engine = filled.engine;
-      } catch {
-        let runPrior = null;
+      } else {
         try {
-          const { ort, session } = await loadSession();
-          runPrior = (source, placement) => buildOnnxPrior(source, placement, session, ort);
+          const { ort, session } = await loadLama();
+          const filled = await lamaFill(bitmap, options || {}, session, ort);
+          blob = filled.blob;
+          engine = filled.engine;
         } catch {
-          runPrior = null;
+          const filled = await fillLight(bitmap, options || {});
+          blob = filled.blob;
+          engine = filled.engine;
         }
-        const filled = await generativeFill(bitmap, options || {}, runPrior);
-        blob = filled.blob;
-        engine = filled.engine;
       }
     } else {
       blob = await composeStory(bitmap, options || {});

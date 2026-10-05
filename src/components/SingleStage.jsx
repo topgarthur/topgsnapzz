@@ -1,3 +1,5 @@
+import { phoneBrowser } from '../utils/phoneBrowser.js';
+
 function formatBytes(size) {
   if (!size) return '';
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -84,7 +86,9 @@ export default function SingleStage({
         </div>
         <p className="hint">
           {mode === 'topgai'
-            ? 'topgai keeps the original sharp. If the photo does not already fill the frame, LaMa fills only the empty space around it. The face and body stay the original pixels.'
+            ? phoneBrowser()
+              ? 'topgai keeps the original sharp. On a phone the full model is too large, so the lighter fill covers only the empty space. The face and body stay the original pixels.'
+              : 'topgai keeps the original sharp. If the photo does not already fill the frame, LaMa fills only the empty space around it. The face and body stay the original pixels.'
             : mode === 'generate'
             ? 'An on-device ONNX network spreads the photo’s color into the empty frame, then real patches from the picture rebuild the texture. Nothing is uploaded.'
             : mode === 'stretch'

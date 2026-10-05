@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { clamp, computePlacement, deviceProfile, frameBox } from '../utils/smartResize.js';
+import { phoneBrowser } from '../utils/phoneBrowser.js';
 import SafeZoneOverlay from './SafeZoneOverlay.jsx';
 
 export default function PreviewFrame({
@@ -211,7 +212,11 @@ export default function PreviewFrame({
             <div className="frame-progress" data-testid="topgai-progress" role="status">
               <i />
               <strong>topgai is filling the gaps</strong>
-              <span>Your face and body stay as they are. The first fill can take a minute.</span>
+              <span>
+                {phoneBrowser()
+                  ? 'This phone uses the lighter fill so the page stays open. Your face and body stay as they are.'
+                  : 'Your face and body stay as they are. The first fill can take a minute.'}
+              </span>
             </div>
           ) : null}
           {busy && item?.frameMode !== 'topgai' ? <p className="frame-chip">Framing off-thread</p> : null}
@@ -219,9 +224,7 @@ export default function PreviewFrame({
             <p className="frame-chip is-done" data-testid="topgai-done">
               {item.engine === 'original'
                 ? 'topgai finished. This photo already filled the frame.'
-                : item.engine === 'lama'
-                  ? 'topgai finished. The gaps are filled.'
-                  : 'topgai finished. The frame is ready.'}
+                : 'topgai finished. The gaps are filled.'}
             </p>
           ) : null}
           {!busy && item?.frameMode === 'topgai' && item.status === 'error' ? (

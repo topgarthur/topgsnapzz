@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { phoneBrowser } from '../utils/phoneBrowser.js';
 import { computePlacement, deviceProfile, fitsStory, frameBox } from '../utils/smartResize.js';
 
 const SEND_SECTIONS = [
@@ -402,7 +403,11 @@ export default function MemoryRemix({
                   <div className="topgai-progress" data-testid="topgai-sheet-progress" role="status">
                     <i />
                     <strong>topgai is filling the gaps</strong>
-                    <span>Your face and body stay as they are. The first fill can take a minute.</span>
+                    <span>
+                      {phoneBrowser()
+                        ? 'This phone uses the lighter fill so the page stays open. Your face and body stay as they are.'
+                        : 'Your face and body stay as they are. The first fill can take a minute.'}
+                    </span>
                   </div>
                 ) : null}
                 <div
