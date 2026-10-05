@@ -433,11 +433,11 @@ export default function MemoryRemix({
               {item.status === 'queued' || item.status === 'processing'
                 ? 'topgai is filling only the empty space around the photo. The face and body stay the original pixels.'
                 : fitted && item.engine === 'original'
-                ? `The photo already filled ${output.width}×${output.height}, so topgai kept the original pixels. No blur was added.`
+                ? `topgai finished. The photo already filled ${output.width}×${output.height}, so the original pixels stayed.`
                 : fitted && item.engine === 'lama'
-                  ? 'The original stays sharp. LaMa filled only the empty space around the photo. The face and body are the original pixels.'
+                  ? 'topgai finished. The gaps are filled and the face and body stayed the original pixels.'
                   : fitted
-                    ? 'The original stays sharp. topgai filled only the empty space around the photo. The face and body are the original pixels.'
+                    ? 'topgai finished. The frame is ready and the face and body stayed the original pixels.'
                     : alreadyFits
                       ? `This photo already matches the frame. topgai will scale it to ${output.width}×${output.height} without filling anything in.`
                       : 'This photo does not cover the frame. topgai keeps it whole and generates only the gaps.'}

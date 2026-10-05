@@ -152,7 +152,7 @@ export default function CropStudio({ onSend }) {
     if (event.target?.closest?.('[data-crop-grid]')) return;
     const point = pointInStage(event);
     if (!point) return;
-    event.preventDefault();
+    const touch = event.pointerType === 'touch';
     const { px, py, bounds } = point;
     const handle = event.target?.dataset?.handle || '';
     const inside = px >= crop.x && px <= crop.x + crop.w && py >= crop.y && py <= crop.y + crop.h;
@@ -165,8 +165,13 @@ export default function CropStudio({ onSend }) {
       handle,
       move: !handle && inside,
       draw: !handle && !inside,
+      touch,
+      locked: !touch || Boolean(handle),
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    if (!touch || handle) {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
   };
 
   const onPointerMove = (event) => {
@@ -176,6 +181,15 @@ export default function CropStudio({ onSend }) {
     if (!point) return;
     const dx = point.px - drag.px;
     const dy = point.py - drag.py;
+    if (drag.touch && !drag.locked) {
+      if (Math.hypot(dx, dy) < 0.02) return;
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        dragRef.current = null;
+        return;
+      }
+      drag.locked = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     const start = drag.crop;
     if (drag.draw) {
       setCrop(

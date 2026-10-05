@@ -67,23 +67,40 @@ export default function PreviewFrame({
 
   const onPointerDown = (event) => {
     if (!item || event.button > 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    const touch = event.pointerType === 'touch';
     dragRef.current = {
       x: event.clientX,
       y: event.clientY,
       panX: item.pan.x,
       panY: item.pan.y,
+      touch,
+      sliding: !touch,
     };
-    setDragging(true);
+    if (!touch) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setDragging(true);
+    }
   };
 
   const onPointerMove = (event) => {
     const drag = dragRef.current;
     if (!drag) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (drag.touch && !drag.sliding) {
+      if (Math.hypot(dx, dy) < 12) return;
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        dragRef.current = null;
+        return;
+      }
+      drag.sliding = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setDragging(true);
+    }
     const rect = event.currentTarget.getBoundingClientRect();
     movePan({
-      x: clamp(drag.panX + ((event.clientX - drag.x) / rect.width) * 1.6, -1, 1),
-      y: clamp(drag.panY + ((event.clientY - drag.y) / rect.height) * 1.6, -1, 1),
+      x: clamp(drag.panX + (dx / rect.width) * 1.6, -1, 1),
+      y: clamp(drag.panY + (dy / rect.height) * 1.6, -1, 1),
     });
   };
 
@@ -198,6 +215,20 @@ export default function PreviewFrame({
             </div>
           ) : null}
           {busy && item?.frameMode !== 'topgai' ? <p className="frame-chip">Framing off-thread</p> : null}
+          {!busy && item?.frameMode === 'topgai' && item.status === 'done' && item.resultUrl ? (
+            <p className="frame-chip is-done" data-testid="topgai-done">
+              {item.engine === 'original'
+                ? 'topgai finished. This photo already filled the frame.'
+                : item.engine === 'lama'
+                  ? 'topgai finished. The gaps are filled.'
+                  : 'topgai finished. The frame is ready.'}
+            </p>
+          ) : null}
+          {!busy && item?.frameMode === 'topgai' && item.status === 'error' ? (
+            <p className="frame-chip is-error" data-testid="topgai-failed">
+              {item.error || 'topgai did not finish.'}
+            </p>
+          ) : null}
         </div>
       </div>
       <p className="frame-caption">
