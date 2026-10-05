@@ -1,5 +1,6 @@
+import { fluxFill } from '../utils/fluxFill.js';
 import { buildOnnxPrior, generativeFill, inpaintRects, lamaFill, sharpFill } from '../utils/generativeFill.js';
-import { composeStory, fitsStory, paintFullFrame } from '../utils/smartResize.js';
+import { composeStory, paintFullFrame } from '../utils/smartResize.js';
 
 function releaseBitmap(bitmap) {
   if (bitmap && typeof bitmap.close === 'function') bitmap.close();
@@ -69,17 +70,21 @@ self.onmessage = async (event) => {
     const mode = options?.mode;
     let blob;
     let engine = mode === 'stretch' ? 'stretch' : 'blend';
-    const box = {
-      width: Number(options?.width) || 1080,
-      height: Number(options?.height) || 1920,
-    };
-    if (mode === 'topgai' && fitsStory(bitmap.width, bitmap.height, box.width, box.height)) {
-      blob = await paintFullFrame(bitmap, options || {});
-      engine = 'original';
-    } else if (mode === 'topgai') {
-      const filled = await sharpFill(bitmap, options || {});
-      blob = filled.blob;
-      engine = filled.engine;
+    if (mode === 'topgai') {
+      try {
+        const filled = await fluxFill(bitmap, options || {});
+        if (filled.skip) {
+          blob = await paintFullFrame(bitmap, options || {});
+          engine = 'original';
+        } else {
+          blob = filled.blob;
+          engine = filled.engine || 'flux';
+        }
+      } catch {
+        const filled = await sharpFill(bitmap, options || {});
+        blob = filled.blob;
+        engine = filled.engine;
+      }
     } else if (mode === 'generate') {
       const filled = await fillLight(bitmap, options || {});
       blob = filled.blob;

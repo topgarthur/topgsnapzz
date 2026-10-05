@@ -401,7 +401,7 @@ export default function MemoryRemix({
                   <div className="topgai-progress" data-testid="topgai-sheet-progress" role="status">
                     <i />
                     <strong>topgai is filling the gaps</strong>
-                    <span>The empty space is being filled. A cut-off head or object is continued so it can be seen whole.</span>
+                    <span>Flux Fill is painting the empty space. The original photo stays in place.</span>
                   </div>
                 ) : null}
                 <div
@@ -430,14 +430,16 @@ export default function MemoryRemix({
             </div>
             <p className="memory-note" data-testid="topgai-note">
               {item.status === 'queued' || item.status === 'processing'
-                ? 'topgai is filling the empty space. A cut-off head, hair, or object is continued so it can be seen whole.'
-                : fitted && item.engine === 'original'
-                ? `topgai finished. The photo already filled ${output.width}×${output.height}, so the original pixels stayed.`
-                : fitted
-                  ? 'topgai finished. The empty space is filled, and a cut-off head or object is continued.'
-                  : alreadyFits
-                    ? `This photo already matches the frame. topgai will scale it to ${output.width}×${output.height}.`
-                    : 'topgai fills the empty space. If a head or object is cut off, it continues that part so it can be seen whole.'}
+                ? 'Flux Fill is painting the empty space. The face already in the photo stays as it is.'
+                : fitted && item.engine === 'flux'
+                  ? 'topgai finished. Flux Fill painted the empty space.'
+                  : fitted && item.engine === 'original'
+                    ? `topgai finished. The photo already filled ${output.width}×${output.height}, so the original pixels stayed.`
+                    : fitted
+                      ? 'topgai finished. The photo stays sharp and the empty space is filled from the background.'
+                      : alreadyFits
+                        ? `This photo already matches the frame. topgai will scale it to ${output.width}×${output.height}.`
+                        : 'topgai keeps the original photo sharp and sends the empty space to Flux Fill.'}
             </p>
             <p className="memory-note">
               Either phone is the default when you do not know what they use. It keeps the subject clear of both chat bars.

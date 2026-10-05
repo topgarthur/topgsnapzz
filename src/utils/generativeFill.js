@@ -1,4 +1,4 @@
-import { STORY_HEIGHT, STORY_WIDTH, clamp, computePlacement, destBox, paintSubject, stampCaption } from './smartResize.js';
+import { STORY_HEIGHT, STORY_WIDTH, clamp, computePlacement, destBox, fitsStory, paintSubject, stampCaption } from './smartResize.js';
 
 const PRIOR_SIZE = 64;
 
@@ -328,59 +328,6 @@ function inferBitmap(bitmap) {
   return { nx: 0.5, ny: 0.16, nw: 0.42, nh: 0.3, label: 'person', clipped: ['top'] };
 }
 
-function paintCompletion(ctx, placement, anchor) {
-  const clipped = anchor?.clipped || [];
-  if (!clipped.includes('top')) return;
-  const top = placement.y;
-  const dw = placement.dw;
-  const dh = placement.dh;
-  const subW = Math.max(32, (anchor.nw || 0.42) * dw);
-  const subH = Math.max(32, (anchor.nh || 0.3) * dh);
-  const cx = placement.x + (anchor.nx || 0.5) * dw;
-  const person = /face|person|subject/i.test(anchor.label || '');
-  const capH = Math.max(18, Math.min(top - 1, subH * (person ? 0.72 : 0.4)));
-  if (!(capH > 12) || !(top > 12)) return;
-  const capW = Math.max(24, subW * (person ? 1 : 0.9));
-  const capX = cx - capW / 2;
-  const srcH = Math.max(8, Math.min(32, Math.round(dh * 0.045)));
-  const tex = new OffscreenCanvas(Math.ceil(capW), srcH);
-  const texCtx = tex.getContext('2d');
-  if (person) {
-    const side = Math.max(8, Math.round(capW * 0.38));
-    texCtx.drawImage(ctx.canvas, capX, top, side, srcH, 0, 0, side, srcH);
-    texCtx.save();
-    texCtx.translate(capW, 0);
-    texCtx.scale(-1, 1);
-    texCtx.drawImage(ctx.canvas, capX + capW - side, top, side, srcH, 0, 0, side, srcH);
-    texCtx.restore();
-    texCtx.drawImage(tex, 0, 0, side, srcH, side * 0.45, 0, capW - side * 0.9, srcH);
-  } else {
-    texCtx.drawImage(ctx.canvas, capX, top, capW, srcH, 0, 0, capW, srcH);
-  }
-
-  const cap = new OffscreenCanvas(Math.ceil(capW), Math.ceil(capH));
-  const capCtx = cap.getContext('2d');
-  capCtx.imageSmoothingEnabled = true;
-  capCtx.imageSmoothingQuality = 'high';
-  const mirrored = Math.min(srcH, Math.ceil(capH / 2));
-  capCtx.drawImage(tex, 0, capH - mirrored, capW, mirrored);
-  capCtx.save();
-  capCtx.translate(0, capH - mirrored);
-  capCtx.scale(1, -1);
-  capCtx.drawImage(tex, 0, 0, capW, mirrored, 0, 0, capW, mirrored);
-  capCtx.restore();
-  const above = capH - mirrored * 2;
-  if (above > 1) capCtx.drawImage(tex, 0, 0, capW, 1, 0, 0, capW, above);
-  capCtx.globalCompositeOperation = 'destination-in';
-  const fade = capCtx.createRadialGradient(capW / 2, capH, capW * 0.1, capW / 2, capH * 0.2, Math.max(capW, capH) * 0.72);
-  fade.addColorStop(0, 'rgba(0,0,0,1)');
-  fade.addColorStop(0.58, 'rgba(0,0,0,0.92)');
-  fade.addColorStop(1, 'rgba(0,0,0,0)');
-  capCtx.fillStyle = fade;
-  capCtx.fillRect(0, 0, capW, capH);
-  ctx.drawImage(cap, capX, top - capH);
-}
-
 function paintBackdrop(ctx, width, height, placement) {
   const left = Math.round(placement.x);
   const top = Math.round(placement.y);
@@ -414,7 +361,7 @@ function paintBackdrop(ctx, width, height, placement) {
   if (right < width - 1) paintStrip(right - Math.min(margin, photoW), top, Math.min(margin, photoW), photoH, right, top, width - right, photoH);
 }
 
-export async function sharpFill(bitmap, options) {
+function frameTopgai(bitmap, options) {
   const { width, height } = destBox(options);
   const placement = computePlacement(
     bitmap.width,
@@ -436,12 +383,52 @@ export async function sharpFill(bitmap, options) {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bitmap, placed.x, placed.y, placed.dw, placed.dh);
   paintBackdrop(ctx, width, height, placed);
-  paintCompletion(ctx, placed, anchor);
   paintSubject(ctx, bitmap, placed, true);
   stampCaption(ctx, options.caption, width, height, options.safe);
+  return { canvas, width, height, placed, anchor };
+}
+
+function buildTopgaiMask(width, height, placed, anchor) {
+  const mask = new OffscreenCanvas(width, height);
+  const ctx = mask.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(placed.x, placed.y, placed.dw, placed.dh);
+  if (anchor?.clipped?.includes('top')) {
+    const subW = Math.max(32, (anchor.nw || 0.42) * placed.dw);
+    const subH = Math.max(32, (anchor.nh || 0.3) * placed.dh);
+    const cx = placed.x + (anchor.nx || 0.5) * placed.dw;
+    const band = Math.max(16, Math.min(subH * 0.22, placed.dh * 0.16));
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(cx, placed.y, subW * 0.48, band, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return mask;
+}
+
+export async function sharpFill(bitmap, options) {
+  const framed = frameTopgai(bitmap, options);
   const quality = clamp(Number(options.quality) || 0.92, 0.7, 1);
-  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+  const blob = await framed.canvas.convertToBlob({ type: 'image/jpeg', quality });
   return { blob, engine: 'sharp' };
+}
+
+export async function topgaiAssets(bitmap, options) {
+  const { width, height } = destBox(options);
+  const detected = options.anchor?.clipped?.includes('top') ? options.anchor : inferBitmap(bitmap);
+  if (fitsStory(bitmap.width, bitmap.height, width, height) && !detected?.clipped?.includes('top')) {
+    return { skip: true };
+  }
+  const framed = frameTopgai(bitmap, options);
+  const mask = buildTopgaiMask(framed.width, framed.height, framed.placed, framed.anchor);
+  const quality = clamp(Number(options.quality) || 0.92, 0.7, 1);
+  const [imageBlob, maskBlob] = await Promise.all([
+    framed.canvas.convertToBlob({ type: 'image/jpeg', quality }),
+    mask.convertToBlob({ type: 'image/png' }),
+  ]);
+  return { skip: false, width: framed.width, height: framed.height, imageBlob, maskBlob };
 }
 
 async function lamaPatch(sourceCanvas, maskCanvas, session, ort) {

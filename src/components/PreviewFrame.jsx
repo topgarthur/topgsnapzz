@@ -212,7 +212,7 @@ export default function PreviewFrame({
             <div className="frame-progress" data-testid="topgai-progress" role="status">
               <i />
               <strong>topgai is filling the gaps</strong>
-              <span>The empty space is being filled. A cut-off head or object is continued so it can be seen whole.</span>
+              <span>Flux Fill is painting the empty space. The original photo stays in place.</span>
             </div>
           ) : null}
           {busy && item?.frameMode !== 'topgai' ? <p className="frame-chip">Framing off-thread</p> : null}
@@ -220,7 +220,9 @@ export default function PreviewFrame({
             <p className="frame-chip is-done" data-testid="topgai-done">
               {item.engine === 'original'
                 ? 'topgai finished. This photo already filled the frame.'
-                : 'topgai finished. The empty space is filled, and a cut-off head or object is continued.'}
+                : item.engine === 'flux'
+                  ? 'topgai finished. Flux Fill painted the empty space.'
+                  : 'topgai finished. The photo stays sharp and the empty space is filled from the background.'}
             </p>
           ) : null}
           {!busy && item?.frameMode === 'topgai' && item.status === 'error' ? (
@@ -235,17 +237,19 @@ export default function PreviewFrame({
           {output.width} × {output.height}
         </span>
         <span>{output.label}</span>
-        {item?.engine === 'lama' || item?.engine === 'sharp' || item?.engine === 'onnx' || item?.engine === 'patch' || item?.engine === 'original' ? (
+        {item?.engine === 'flux' || item?.engine === 'lama' || item?.engine === 'sharp' || item?.engine === 'onnx' || item?.engine === 'patch' || item?.engine === 'original' ? (
           <span data-testid="fill-engine">
-            {item.engine === 'lama'
-              ? 'LaMa fill'
-              : item.engine === 'sharp'
-                ? 'Sharp fill'
-                : item.engine === 'onnx'
-                  ? 'ONNX fill'
-                  : item.engine === 'patch'
-                    ? 'Patch fill'
-                    : 'Original'}
+            {item.engine === 'flux'
+              ? 'Flux Fill'
+              : item.engine === 'lama'
+                ? 'LaMa fill'
+                : item.engine === 'sharp'
+                  ? 'Sharp fill'
+                  : item.engine === 'onnx'
+                    ? 'ONNX fill'
+                    : item.engine === 'patch'
+                      ? 'Patch fill'
+                      : 'Original'}
           </span>
         ) : null}
         <span data-testid="subject-lock">

@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/topgai.js": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -84,7 +84,7 @@ export default function SingleStage({
         </div>
         <p className="hint">
           {mode === 'topgai'
-            ? 'topgai keeps the original sharp and fills the empty space. If a head, hair, or object is cut off, it continues that part so it can be seen whole.'
+            ? 'topgai keeps the original photo sharp. Flux Fill paints the empty space and can complete a cut-off head or object. The face already in the photo stays as it is.'
             : mode === 'generate'
             ? 'An on-device ONNX network spreads the photo’s color into the empty frame, then real patches from the picture rebuild the texture. Nothing is uploaded.'
             : mode === 'stretch'
