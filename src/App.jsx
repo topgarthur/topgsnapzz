@@ -338,6 +338,12 @@ export default function App() {
     saveFile(asset.resultBlob, zipEntryName(active.name, 0));
   };
 
+  const downloadMemory = async () => {
+    if (!active?.previewUrl) return;
+    const blob = await fetch(active.previewUrl).then((response) => response.blob());
+    saveFile(blob, active.name || 'memory.jpg');
+  };
+
   const downloadZip = async () => {
     const files = [];
     state.items.forEach((item, index) => {
@@ -356,7 +362,6 @@ export default function App() {
 
   const applyMode = (next) => {
     setMode(next);
-    if (next !== 'blend') setSmartBlur(false);
     if (!state.activeId) return;
     const current = state.items.find((item) => item.id === state.activeId);
     const asset = library.current.get(state.activeId);
@@ -513,11 +518,9 @@ export default function App() {
         item={active}
         profileId={deviceProfileId}
         onProfile={setDeviceProfileId}
-        smartBlur={smartBlur && mode === 'blend'}
-        onSmartBlur={(next) => {
-          setSmartBlur(next);
-          if (next) applyMode('blend');
-        }}
+        smartBlur={smartBlur}
+        onSmartBlur={setSmartBlur}
+        onMemoryDownload={downloadMemory}
         deviceGuard={deviceGuard}
         autoFrame={autoFrame}
         frameSize={frameSize}

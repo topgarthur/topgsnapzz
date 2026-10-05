@@ -1,5 +1,3 @@
-import { phoneBrowser } from '../utils/phoneBrowser.js';
-
 function formatBytes(size) {
   if (!size) return '';
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -86,9 +84,7 @@ export default function SingleStage({
         </div>
         <p className="hint">
           {mode === 'topgai'
-            ? phoneBrowser()
-              ? 'topgai keeps the original sharp, sits it on the bottom, and fills the space above from the photo.'
-              : 'topgai keeps the original sharp and sits it on the bottom. LaMa fills only the space above it. The face and body stay the original pixels.'
+            ? 'topgai keeps the original sharp and fills the empty space. If a head, hair, or object is cut off, it continues that part so it can be seen whole.'
             : mode === 'generate'
             ? 'An on-device ONNX network spreads the photo’s color into the empty frame, then real patches from the picture rebuild the texture. Nothing is uploaded.'
             : mode === 'stretch'

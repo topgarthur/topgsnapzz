@@ -94,6 +94,7 @@ export default function MemoryRemix({
   caption,
   onCaption,
   onDownload,
+  onMemoryDownload,
   onFavorite,
   onTopgai,
 }) {
@@ -104,7 +105,7 @@ export default function MemoryRemix({
   const [storyOn, setStoryOn] = useState(false);
   const [sentTo, setSentTo] = useState('');
   const profile = deviceProfile(profileId);
-  const imageUrl = item?.previewUrl || item?.resultUrl || '';
+  const imageUrl = item?.previewUrl || '';
   const placement =
     item?.width && item?.height
       ? computePlacement(
@@ -230,8 +231,6 @@ export default function MemoryRemix({
                       }
                     />
                   </>
-                ) : item.resultUrl ? (
-                  <img className="memory-result" src={item.resultUrl} alt="Framed snap" />
                 ) : imageUrl ? (
                   <img className="memory-sharp is-fallback" src={imageUrl} alt="Snap" />
                 ) : null}
@@ -264,7 +263,7 @@ export default function MemoryRemix({
                   ))}
                 </div>
                 <div className="memory-bar">
-                  <button type="button" data-testid="memory-save" onClick={onDownload} disabled={!item.resultUrl}>
+                  <button type="button" data-testid="memory-save" onClick={onMemoryDownload} disabled={!imageUrl}>
                     Save
                   </button>
                   <button
@@ -402,7 +401,7 @@ export default function MemoryRemix({
                   <div className="topgai-progress" data-testid="topgai-sheet-progress" role="status">
                     <i />
                     <strong>topgai is filling the gaps</strong>
-                    <span>Your photo stays sharp on the bottom while the space above is filled.</span>
+                    <span>The empty space is being filled. A cut-off head or object is continued so it can be seen whole.</span>
                   </div>
                 ) : null}
                 <div
@@ -431,14 +430,14 @@ export default function MemoryRemix({
             </div>
             <p className="memory-note" data-testid="topgai-note">
               {item.status === 'queued' || item.status === 'processing'
-                ? 'topgai is filling the space above the photo. The face and body stay the original pixels.'
+                ? 'topgai is filling the empty space. A cut-off head, hair, or object is continued so it can be seen whole.'
                 : fitted && item.engine === 'original'
                 ? `topgai finished. The photo already filled ${output.width}×${output.height}, so the original pixels stayed.`
                 : fitted
-                  ? 'topgai finished. The photo stays sharp on the bottom and the space above is filled.'
+                  ? 'topgai finished. The empty space is filled, and a cut-off head or object is continued.'
                   : alreadyFits
                     ? `This photo already matches the frame. topgai will scale it to ${output.width}×${output.height}.`
-                    : 'topgai sits the photo on the bottom and fills the space above it from the photo.'}
+                    : 'topgai fills the empty space. If a head or object is cut off, it continues that part so it can be seen whole.'}
             </p>
             <p className="memory-note">
               Either phone is the default when you do not know what they use. It keeps the subject clear of both chat bars.

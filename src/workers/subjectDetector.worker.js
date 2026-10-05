@@ -14,11 +14,23 @@ function boxAnchor(box, width, height, label, source) {
   const nx = (box.originX + box.width / 2) / width;
   const ny = (box.originY + box.height / 2) / height;
   if (!Number.isFinite(nx) || !Number.isFinite(ny)) return null;
+  const top = box.originY / height;
+  const bottom = (box.originY + box.height) / height;
+  const left = box.originX / width;
+  const right = (box.originX + box.width) / width;
+  const clipped = [];
+  if (top <= 0.08) clipped.push('top');
+  if (bottom >= 0.98) clipped.push('bottom');
+  if (left <= 0.02) clipped.push('left');
+  if (right >= 0.98) clipped.push('right');
   return {
     nx: Math.min(0.92, Math.max(0.08, nx)),
     ny: Math.min(0.92, Math.max(0.08, ny)),
+    nw: Math.min(1, Math.max(0.05, box.width / width)),
+    nh: Math.min(1, Math.max(0.05, box.height / height)),
     label,
     source,
+    clipped,
   };
 }
 

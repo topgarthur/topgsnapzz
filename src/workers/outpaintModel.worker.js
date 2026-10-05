@@ -7,12 +7,6 @@ function releaseBitmap(bitmap) {
   if (typeof trigger === 'function') trigger();
 }
 
-function phoneBrowser() {
-  const ua = self.navigator?.userAgent || '';
-  if (/Android|iPhone|iPad|iPod/i.test(ua)) return true;
-  return /Macintosh/i.test(ua) && (self.navigator?.maxTouchPoints || 0) > 1;
-}
-
 async function fillLight(bitmap, options) {
   let runPrior = null;
   try {
@@ -83,23 +77,9 @@ self.onmessage = async (event) => {
       blob = await paintFullFrame(bitmap, options || {});
       engine = 'original';
     } else if (mode === 'topgai') {
-      const light = Boolean(options?.skipLama) || phoneBrowser();
-      if (light) {
-        const filled = await sharpFill(bitmap, options || {});
-        blob = filled.blob;
-        engine = filled.engine;
-      } else {
-        try {
-          const { ort, session } = await loadLama();
-          const filled = await lamaFill(bitmap, options || {}, session, ort);
-          blob = filled.blob;
-          engine = filled.engine;
-        } catch {
-          const filled = await sharpFill(bitmap, options || {});
-          blob = filled.blob;
-          engine = filled.engine;
-        }
-      }
+      const filled = await sharpFill(bitmap, options || {});
+      blob = filled.blob;
+      engine = filled.engine;
     } else if (mode === 'generate') {
       const filled = await fillLight(bitmap, options || {});
       blob = filled.blob;

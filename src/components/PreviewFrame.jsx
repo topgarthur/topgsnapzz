@@ -212,7 +212,7 @@ export default function PreviewFrame({
             <div className="frame-progress" data-testid="topgai-progress" role="status">
               <i />
               <strong>topgai is filling the gaps</strong>
-              <span>Your photo stays sharp on the bottom while the space above is filled.</span>
+              <span>The empty space is being filled. A cut-off head or object is continued so it can be seen whole.</span>
             </div>
           ) : null}
           {busy && item?.frameMode !== 'topgai' ? <p className="frame-chip">Framing off-thread</p> : null}
@@ -220,7 +220,7 @@ export default function PreviewFrame({
             <p className="frame-chip is-done" data-testid="topgai-done">
               {item.engine === 'original'
                 ? 'topgai finished. This photo already filled the frame.'
-                : 'topgai finished. The photo stays sharp on the bottom and the space above is filled.'}
+                : 'topgai finished. The empty space is filled, and a cut-off head or object is continued.'}
             </p>
           ) : null}
           {!busy && item?.frameMode === 'topgai' && item.status === 'error' ? (

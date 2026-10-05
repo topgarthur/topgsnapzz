@@ -278,49 +278,140 @@ export async function generativeFill(bitmap, options, runPrior) {
   return { blob, engine };
 }
 
-function reflectInto(dist, band) {
-  const full = Math.max(1, band);
-  const span = dist > full * 2 ? Math.max(6, Math.round(full * 0.4)) : full;
-  const period = span * 2;
-  const phase = (dist - 1) % period;
-  return phase < span ? phase : period - 1 - phase;
+function openRoom(placement, anchor, height) {
+  const clipped = anchor?.clipped || [];
+  if (!clipped.includes('top')) return placement;
+  const room = Math.round(height * (clipped.length ? 0.14 : 0));
+  if (placement.y >= room) return placement;
+  const dh = height - room;
+  const scale = dh / Math.max(1, placement.dh);
+  const dw = placement.dw * scale;
+  return {
+    ...placement,
+    x: placement.x + (placement.dw - dw) / 2,
+    y: room,
+    dw,
+    dh,
+    scale: placement.scale * scale,
+  };
 }
 
-function extendSharp(image, width, height, placement) {
-  const data = image.data;
-  const left = clampInt(Math.floor(placement.x), 0, width - 1);
-  const top = clampInt(Math.floor(placement.y), 0, height - 1);
-  const right = clampInt(Math.ceil(placement.x + placement.dw), left + 1, width);
-  const bottom = clampInt(Math.ceil(placement.y + placement.dh), top + 1, height);
-  const bandY = Math.max(8, Math.min(28, bottom - top));
-  const bandX = Math.max(8, Math.min(28, right - left));
-  const paint = (x, y, sx, sy) => {
-    const source = (sy * width + sx) * 4;
-    const dest = (y * width + x) * 4;
-    data[dest] = data[source];
-    data[dest + 1] = data[source + 1];
-    data[dest + 2] = data[source + 2];
-    data[dest + 3] = 255;
+function inferBitmap(bitmap) {
+  const width = 90;
+  const band = 8;
+  const canvas = new OffscreenCanvas(width, band);
+  const sample = canvas.getContext('2d', { willReadFrequently: true });
+  sample.drawImage(bitmap, 0, 0, bitmap.width, Math.max(2, bitmap.height * 0.035), 0, 0, width, band);
+  const image = sample.getImageData(0, 0, width, band).data;
+  const average = (x0, x1) => {
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let count = 0;
+    for (let y = 0; y < band; y += 1) {
+      for (let x = x0; x < x1; x += 1) {
+        const offset = (y * width + x) * 4;
+        r += image[offset];
+        g += image[offset + 1];
+        b += image[offset + 2];
+        count += 1;
+      }
+    }
+    return [r / count, g / count, b / count];
+  };
+  const side = average(0, 16);
+  const other = average(width - 16, width);
+  const center = average(32, 58);
+  const sideMean = [(side[0] + other[0]) / 2, (side[1] + other[1]) / 2, (side[2] + other[2]) / 2];
+  const distance = Math.hypot(center[0] - sideMean[0], center[1] - sideMean[1], center[2] - sideMean[2]);
+  if (distance < 48) return null;
+  return { nx: 0.5, ny: 0.16, nw: 0.42, nh: 0.3, label: 'person', clipped: ['top'] };
+}
+
+function paintCompletion(ctx, placement, anchor) {
+  const clipped = anchor?.clipped || [];
+  if (!clipped.includes('top')) return;
+  const top = placement.y;
+  const dw = placement.dw;
+  const dh = placement.dh;
+  const subW = Math.max(32, (anchor.nw || 0.42) * dw);
+  const subH = Math.max(32, (anchor.nh || 0.3) * dh);
+  const cx = placement.x + (anchor.nx || 0.5) * dw;
+  const person = /face|person|subject/i.test(anchor.label || '');
+  const capH = Math.max(18, Math.min(top - 1, subH * (person ? 0.72 : 0.4)));
+  if (!(capH > 12) || !(top > 12)) return;
+  const capW = Math.max(24, subW * (person ? 1 : 0.9));
+  const capX = cx - capW / 2;
+  const srcH = Math.max(8, Math.min(32, Math.round(dh * 0.045)));
+  const tex = new OffscreenCanvas(Math.ceil(capW), srcH);
+  const texCtx = tex.getContext('2d');
+  if (person) {
+    const side = Math.max(8, Math.round(capW * 0.38));
+    texCtx.drawImage(ctx.canvas, capX, top, side, srcH, 0, 0, side, srcH);
+    texCtx.save();
+    texCtx.translate(capW, 0);
+    texCtx.scale(-1, 1);
+    texCtx.drawImage(ctx.canvas, capX + capW - side, top, side, srcH, 0, 0, side, srcH);
+    texCtx.restore();
+    texCtx.drawImage(tex, 0, 0, side, srcH, side * 0.45, 0, capW - side * 0.9, srcH);
+  } else {
+    texCtx.drawImage(ctx.canvas, capX, top, capW, srcH, 0, 0, capW, srcH);
+  }
+
+  const cap = new OffscreenCanvas(Math.ceil(capW), Math.ceil(capH));
+  const capCtx = cap.getContext('2d');
+  capCtx.imageSmoothingEnabled = true;
+  capCtx.imageSmoothingQuality = 'high';
+  const mirrored = Math.min(srcH, Math.ceil(capH / 2));
+  capCtx.drawImage(tex, 0, capH - mirrored, capW, mirrored);
+  capCtx.save();
+  capCtx.translate(0, capH - mirrored);
+  capCtx.scale(1, -1);
+  capCtx.drawImage(tex, 0, 0, capW, mirrored, 0, 0, capW, mirrored);
+  capCtx.restore();
+  const above = capH - mirrored * 2;
+  if (above > 1) capCtx.drawImage(tex, 0, 0, capW, 1, 0, 0, capW, above);
+  capCtx.globalCompositeOperation = 'destination-in';
+  const fade = capCtx.createRadialGradient(capW / 2, capH, capW * 0.1, capW / 2, capH * 0.2, Math.max(capW, capH) * 0.72);
+  fade.addColorStop(0, 'rgba(0,0,0,1)');
+  fade.addColorStop(0.58, 'rgba(0,0,0,0.92)');
+  fade.addColorStop(1, 'rgba(0,0,0,0)');
+  capCtx.fillStyle = fade;
+  capCtx.fillRect(0, 0, capW, capH);
+  ctx.drawImage(cap, capX, top - capH);
+}
+
+function paintBackdrop(ctx, width, height, placement) {
+  const left = Math.round(placement.x);
+  const top = Math.round(placement.y);
+  const right = Math.round(placement.x + placement.dw);
+  const bottom = Math.round(placement.y + placement.dh);
+  const photoW = Math.max(1, right - left);
+  const photoH = Math.max(1, bottom - top);
+  const margin = Math.max(10, Math.round(photoW * 0.18));
+  const band = Math.max(12, Math.min(56, Math.round(photoH * 0.1)));
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const paintStrip = (sx, sy, sw, sh, dx, dy, dw, dh) => {
+    const tiny = new OffscreenCanvas(18, 12);
+    tiny.getContext('2d').drawImage(ctx.canvas, sx, sy, Math.max(1, sw), Math.max(1, sh), 0, 0, 18, 12);
+    ctx.drawImage(tiny, dx, dy, Math.max(1, dw), Math.max(1, dh));
   };
 
-  for (let dist = 1, y = top - 1; y >= 0; dist += 1, y -= 1) {
-    const sy = Math.min(bottom - 1, top + reflectInto(dist, bandY));
-    const jitter = dist < 3 ? 0 : Math.round(Math.sin(dist * 0.47) * Math.min(6, dist * 0.05));
-    for (let x = left; x < right; x += 1) paint(x, y, clampInt(x + jitter, left, right - 1), sy);
+  if (top > 1) {
+    const tiny = new OffscreenCanvas(24, 16);
+    const sample = tiny.getContext('2d');
+    sample.drawImage(ctx.canvas, left, top, margin, band, 0, 0, 12, 16);
+    sample.drawImage(ctx.canvas, right - margin, top, margin, band, 12, 0, 12, 16);
+    ctx.drawImage(tiny, left, 0, photoW, top);
   }
-  for (let dist = 1, y = bottom; y < height; dist += 1, y += 1) {
-    const sy = Math.max(top, bottom - 1 - reflectInto(dist, bandY));
-    const jitter = dist < 3 ? 0 : Math.round(Math.sin(dist * 0.41) * Math.min(6, dist * 0.05));
-    for (let x = left; x < right; x += 1) paint(x, y, clampInt(x + jitter, left, right - 1), sy);
+  if (bottom < height - 1) {
+    paintStrip(left, bottom - band, margin, band, left, bottom, Math.round(photoW / 2), height - bottom);
+    paintStrip(right - margin, bottom - band, margin, band, left + Math.round(photoW / 2), bottom, photoW - Math.round(photoW / 2), height - bottom);
   }
-  for (let dist = 1, x = left - 1; x >= 0; dist += 1, x -= 1) {
-    const sx = Math.min(right - 1, left + reflectInto(dist, bandX));
-    for (let y = 0; y < height; y += 1) paint(x, y, sx, y);
-  }
-  for (let dist = 1, x = right; x < width; dist += 1, x += 1) {
-    const sx = Math.max(left, right - 1 - reflectInto(dist, bandX));
-    for (let y = 0; y < height; y += 1) paint(x, y, sx, y);
-  }
+  if (left > 1) paintStrip(left, top, Math.min(margin, photoW), photoH, 0, top, left, photoH);
+  if (right < width - 1) paintStrip(right - Math.min(margin, photoW), top, Math.min(margin, photoW), photoH, right, top, width - right, photoH);
 }
 
 export async function sharpFill(bitmap, options) {
@@ -337,15 +428,16 @@ export async function sharpFill(bitmap, options) {
     options.safe || null,
     true,
   );
+  const anchor = options.anchor?.clipped?.includes('top') ? options.anchor : inferBitmap(bitmap);
+  const placed = openRoom(placement, anchor, height);
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bitmap, placement.x, placement.y, placement.dw, placement.dh);
-  const image = ctx.getImageData(0, 0, width, height);
-  extendSharp(image, width, height, placement);
-  ctx.putImageData(image, 0, 0);
-  paintSubject(ctx, bitmap, placement, true);
+  ctx.drawImage(bitmap, placed.x, placed.y, placed.dw, placed.dh);
+  paintBackdrop(ctx, width, height, placed);
+  paintCompletion(ctx, placed, anchor);
+  paintSubject(ctx, bitmap, placed, true);
   stampCaption(ctx, options.caption, width, height, options.safe);
   const quality = clamp(Number(options.quality) || 0.92, 0.7, 1);
   const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });

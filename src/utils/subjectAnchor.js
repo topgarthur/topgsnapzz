@@ -59,10 +59,16 @@ export function salienceAnchor(data, width, height) {
     }
   }
 
+  const clipped = [];
+  if (best.ny - 0.11 <= 0.02) clipped.push('top');
+  if (best.ny + 0.11 >= 0.98) clipped.push('bottom');
   return {
     nx: clamp(best.nx, 0.08, 0.92),
     ny: clamp(best.ny, 0.08, 0.92),
+    nw: 0.34,
+    nh: 0.34,
     label: best.label,
     source: 'saliency',
+    clipped,
   };
 }
