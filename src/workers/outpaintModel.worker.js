@@ -1,4 +1,4 @@
-import { buildOnnxPrior, generativeFill, inpaintRects, lamaFill } from '../utils/generativeFill.js';
+import { buildOnnxPrior, generativeFill, inpaintRects, lamaFill, sharpFill } from '../utils/generativeFill.js';
 import { composeStory, fitsStory, paintFullFrame } from '../utils/smartResize.js';
 
 function releaseBitmap(bitmap) {
@@ -82,10 +82,10 @@ self.onmessage = async (event) => {
     if (mode === 'topgai' && fitsStory(bitmap.width, bitmap.height, box.width, box.height)) {
       blob = await paintFullFrame(bitmap, options || {});
       engine = 'original';
-    } else if (mode === 'generate' || mode === 'topgai') {
+    } else if (mode === 'topgai') {
       const light = Boolean(options?.skipLama) || phoneBrowser();
       if (light) {
-        const filled = await fillLight(bitmap, options || {});
+        const filled = await sharpFill(bitmap, options || {});
         blob = filled.blob;
         engine = filled.engine;
       } else {
@@ -95,11 +95,15 @@ self.onmessage = async (event) => {
           blob = filled.blob;
           engine = filled.engine;
         } catch {
-          const filled = await fillLight(bitmap, options || {});
+          const filled = await sharpFill(bitmap, options || {});
           blob = filled.blob;
           engine = filled.engine;
         }
       }
+    } else if (mode === 'generate') {
+      const filled = await fillLight(bitmap, options || {});
+      blob = filled.blob;
+      engine = filled.engine;
     } else {
       blob = await composeStory(bitmap, options || {});
     }

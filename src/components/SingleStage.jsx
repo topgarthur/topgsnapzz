@@ -87,8 +87,8 @@ export default function SingleStage({
         <p className="hint">
           {mode === 'topgai'
             ? phoneBrowser()
-              ? 'topgai keeps the original sharp. On a phone the full model is too large, so the lighter fill covers only the empty space. The face and body stay the original pixels.'
-              : 'topgai keeps the original sharp. If the photo does not already fill the frame, LaMa fills only the empty space around it. The face and body stay the original pixels.'
+              ? 'topgai keeps the original sharp, sits it on the bottom, and fills the space above from the photo.'
+              : 'topgai keeps the original sharp and sits it on the bottom. LaMa fills only the space above it. The face and body stay the original pixels.'
             : mode === 'generate'
             ? 'An on-device ONNX network spreads the photo’s color into the empty frame, then real patches from the picture rebuild the texture. Nothing is uploaded.'
             : mode === 'stretch'

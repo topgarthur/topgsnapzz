@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { clamp, computePlacement, deviceProfile, frameBox } from '../utils/smartResize.js';
-import { phoneBrowser } from '../utils/phoneBrowser.js';
 import SafeZoneOverlay from './SafeZoneOverlay.jsx';
 
 export default function PreviewFrame({
@@ -56,6 +55,7 @@ export default function PreviewFrame({
           deviceGuard,
           autoFrame ? item.anchor : null,
           deviceProfile(deviceProfileId),
+          item.frameMode === 'topgai',
         )
       : null;
   const showExact = Boolean(item?.resultUrl) && !dragging;
@@ -212,11 +212,7 @@ export default function PreviewFrame({
             <div className="frame-progress" data-testid="topgai-progress" role="status">
               <i />
               <strong>topgai is filling the gaps</strong>
-              <span>
-                {phoneBrowser()
-                  ? 'This phone uses the lighter fill so the page stays open. Your face and body stay as they are.'
-                  : 'Your face and body stay as they are. The first fill can take a minute.'}
-              </span>
+              <span>Your photo stays sharp on the bottom while the space above is filled.</span>
             </div>
           ) : null}
           {busy && item?.frameMode !== 'topgai' ? <p className="frame-chip">Framing off-thread</p> : null}
@@ -224,7 +220,7 @@ export default function PreviewFrame({
             <p className="frame-chip is-done" data-testid="topgai-done">
               {item.engine === 'original'
                 ? 'topgai finished. This photo already filled the frame.'
-                : 'topgai finished. The gaps are filled.'}
+                : 'topgai finished. The photo stays sharp on the bottom and the space above is filled.'}
             </p>
           ) : null}
           {!busy && item?.frameMode === 'topgai' && item.status === 'error' ? (
@@ -239,19 +235,25 @@ export default function PreviewFrame({
           {output.width} × {output.height}
         </span>
         <span>{output.label}</span>
-        {item?.engine === 'lama' || item?.engine === 'onnx' || item?.engine === 'patch' || item?.engine === 'original' ? (
+        {item?.engine === 'lama' || item?.engine === 'sharp' || item?.engine === 'onnx' || item?.engine === 'patch' || item?.engine === 'original' ? (
           <span data-testid="fill-engine">
             {item.engine === 'lama'
               ? 'LaMa fill'
-              : item.engine === 'onnx'
-                ? 'ONNX fill'
-                : item.engine === 'patch'
-                  ? 'Patch fill'
-                  : 'Original'}
+              : item.engine === 'sharp'
+                ? 'Sharp fill'
+                : item.engine === 'onnx'
+                  ? 'ONNX fill'
+                  : item.engine === 'patch'
+                    ? 'Patch fill'
+                    : 'Original'}
           </span>
         ) : null}
         <span data-testid="subject-lock">
-          {autoFrame && item?.anchor ? `Locked: ${item.anchor.label}` : 'Center weight'}
+          {item?.frameMode === 'topgai'
+            ? 'Bottom fit'
+            : autoFrame && item?.anchor
+              ? `Locked: ${item.anchor.label}`
+              : 'Center weight'}
         </span>
         <span>{dragging ? 'Release to render' : 'Slide to reframe'}</span>
         {item?.resultUrl ? (

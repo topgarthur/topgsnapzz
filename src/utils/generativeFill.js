@@ -164,6 +164,7 @@ export async function lamaFill(bitmap, options, session, ort) {
     Boolean(options.deviceGuard),
     options.anchor || null,
     options.safe || null,
+    true,
   );
   const size = 512;
   const sample = new OffscreenCanvas(size, size);
@@ -275,6 +276,80 @@ export async function generativeFill(bitmap, options, runPrior) {
   const quality = clamp(Number(options.quality) || 0.92, 0.7, 1);
   const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
   return { blob, engine };
+}
+
+function reflectInto(dist, band) {
+  const full = Math.max(1, band);
+  const span = dist > full * 2 ? Math.max(6, Math.round(full * 0.4)) : full;
+  const period = span * 2;
+  const phase = (dist - 1) % period;
+  return phase < span ? phase : period - 1 - phase;
+}
+
+function extendSharp(image, width, height, placement) {
+  const data = image.data;
+  const left = clampInt(Math.floor(placement.x), 0, width - 1);
+  const top = clampInt(Math.floor(placement.y), 0, height - 1);
+  const right = clampInt(Math.ceil(placement.x + placement.dw), left + 1, width);
+  const bottom = clampInt(Math.ceil(placement.y + placement.dh), top + 1, height);
+  const bandY = Math.max(8, Math.min(28, bottom - top));
+  const bandX = Math.max(8, Math.min(28, right - left));
+  const paint = (x, y, sx, sy) => {
+    const source = (sy * width + sx) * 4;
+    const dest = (y * width + x) * 4;
+    data[dest] = data[source];
+    data[dest + 1] = data[source + 1];
+    data[dest + 2] = data[source + 2];
+    data[dest + 3] = 255;
+  };
+
+  for (let dist = 1, y = top - 1; y >= 0; dist += 1, y -= 1) {
+    const sy = Math.min(bottom - 1, top + reflectInto(dist, bandY));
+    const jitter = dist < 3 ? 0 : Math.round(Math.sin(dist * 0.47) * Math.min(6, dist * 0.05));
+    for (let x = left; x < right; x += 1) paint(x, y, clampInt(x + jitter, left, right - 1), sy);
+  }
+  for (let dist = 1, y = bottom; y < height; dist += 1, y += 1) {
+    const sy = Math.max(top, bottom - 1 - reflectInto(dist, bandY));
+    const jitter = dist < 3 ? 0 : Math.round(Math.sin(dist * 0.41) * Math.min(6, dist * 0.05));
+    for (let x = left; x < right; x += 1) paint(x, y, clampInt(x + jitter, left, right - 1), sy);
+  }
+  for (let dist = 1, x = left - 1; x >= 0; dist += 1, x -= 1) {
+    const sx = Math.min(right - 1, left + reflectInto(dist, bandX));
+    for (let y = 0; y < height; y += 1) paint(x, y, sx, y);
+  }
+  for (let dist = 1, x = right; x < width; dist += 1, x += 1) {
+    const sx = Math.max(left, right - 1 - reflectInto(dist, bandX));
+    for (let y = 0; y < height; y += 1) paint(x, y, sx, y);
+  }
+}
+
+export async function sharpFill(bitmap, options) {
+  const { width, height } = destBox(options);
+  const placement = computePlacement(
+    bitmap.width,
+    bitmap.height,
+    width,
+    height,
+    options.panX || 0,
+    options.panY || 0,
+    Boolean(options.deviceGuard),
+    options.anchor || null,
+    options.safe || null,
+    true,
+  );
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bitmap, placement.x, placement.y, placement.dw, placement.dh);
+  const image = ctx.getImageData(0, 0, width, height);
+  extendSharp(image, width, height, placement);
+  ctx.putImageData(image, 0, 0);
+  paintSubject(ctx, bitmap, placement, true);
+  stampCaption(ctx, options.caption, width, height, options.safe);
+  const quality = clamp(Number(options.quality) || 0.92, 0.7, 1);
+  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+  return { blob, engine: 'sharp' };
 }
 
 async function lamaPatch(sourceCanvas, maskCanvas, session, ort) {

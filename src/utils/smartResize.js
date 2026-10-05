@@ -61,6 +61,7 @@ export function computePlacement(
   deviceGuard = false,
   anchor = null,
   safe = null,
+  pinBottom = false,
 ) {
   const zone = safeInsets(safe);
   const scale = Math.min(dstW / srcW, dstH / srcH);
@@ -70,22 +71,24 @@ export function computePlacement(
   const slackY = dstH - dh;
 
   let x = slackX / 2;
-  let y = slackY / 2;
+  let y = pinBottom ? slackY : slackY / 2;
   if (anchor && Number.isFinite(anchor.nx) && Number.isFinite(anchor.ny)) {
     const targetX = dstW * 0.5;
-    const targetY = (deviceGuard ? zone.centerY : 0.5) * dstH;
     x += targetX - (x + clamp(anchor.nx, 0, 1) * dw);
-    y += targetY - (y + clamp(anchor.ny, 0, 1) * dh);
-  } else if (deviceGuard) {
+    if (!pinBottom) {
+      const targetY = (deviceGuard ? zone.centerY : 0.5) * dstH;
+      y += targetY - (y + clamp(anchor.ny, 0, 1) * dh);
+    }
+  } else if (deviceGuard && !pinBottom) {
     const desired = dstH * zone.centerY - dstH / 2;
     const room = Math.max(0, slackY / 2);
     y += clamp(desired, -room, room);
   }
 
   x += panX * (slackX / 2);
-  y += panY * (slackY / 2);
-  x = clamp(x, 0, slackX);
-  y = clamp(y, 0, slackY);
+  if (!pinBottom) y += panY * (slackY / 2);
+  x = clamp(x, 0, Math.max(0, slackX));
+  y = clamp(y, 0, Math.max(0, slackY));
   return { x, y, dw, dh, scale };
 }
 

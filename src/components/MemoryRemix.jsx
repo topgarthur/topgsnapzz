@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { phoneBrowser } from '../utils/phoneBrowser.js';
 import { computePlacement, deviceProfile, fitsStory, frameBox } from '../utils/smartResize.js';
 
 const SEND_SECTIONS = [
@@ -403,11 +402,7 @@ export default function MemoryRemix({
                   <div className="topgai-progress" data-testid="topgai-sheet-progress" role="status">
                     <i />
                     <strong>topgai is filling the gaps</strong>
-                    <span>
-                      {phoneBrowser()
-                        ? 'This phone uses the lighter fill so the page stays open. Your face and body stay as they are.'
-                        : 'Your face and body stay as they are. The first fill can take a minute.'}
-                    </span>
+                    <span>Your photo stays sharp on the bottom while the space above is filled.</span>
                   </div>
                 ) : null}
                 <div
@@ -436,16 +431,14 @@ export default function MemoryRemix({
             </div>
             <p className="memory-note" data-testid="topgai-note">
               {item.status === 'queued' || item.status === 'processing'
-                ? 'topgai is filling only the empty space around the photo. The face and body stay the original pixels.'
+                ? 'topgai is filling the space above the photo. The face and body stay the original pixels.'
                 : fitted && item.engine === 'original'
                 ? `topgai finished. The photo already filled ${output.width}×${output.height}, so the original pixels stayed.`
-                : fitted && item.engine === 'lama'
-                  ? 'topgai finished. The gaps are filled and the face and body stayed the original pixels.'
-                  : fitted
-                    ? 'topgai finished. The frame is ready and the face and body stayed the original pixels.'
-                    : alreadyFits
-                      ? `This photo already matches the frame. topgai will scale it to ${output.width}×${output.height} without filling anything in.`
-                      : 'This photo does not cover the frame. topgai keeps it whole and generates only the gaps.'}
+                : fitted
+                  ? 'topgai finished. The photo stays sharp on the bottom and the space above is filled.'
+                  : alreadyFits
+                    ? `This photo already matches the frame. topgai will scale it to ${output.width}×${output.height}.`
+                    : 'topgai sits the photo on the bottom and fills the space above it from the photo.'}
             </p>
             <p className="memory-note">
               Either phone is the default when you do not know what they use. It keeps the subject clear of both chat bars.
